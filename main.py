@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from io import BytesIO
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
@@ -138,7 +138,12 @@ async def daily_job():
 
         text += f"更新時間：{pd.Timestamp('now').tz_localize('Asia/Taipei').strftime('%Y-%m-%d %H:%M')}"
 
-    await app.send_message(MY_CHAT_ID, text, parse_mode="html", disable_web_page_preview=True)
+    await app.send_message(
+        MY_CHAT_ID, 
+        text, 
+        parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
+        disable_web_page_preview=True
+    )
     print(f"通知已發送，共 {len(results)} 檔符合條件")
 
 # ================== 主程式啟動 ==================
