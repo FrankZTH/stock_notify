@@ -24,7 +24,16 @@ app = Client(
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
-
+# ==================== 加上這段：文字指令觸發更新 ====================
+@app.on_message(filters.private & filters.text & filters.user(YOUR_USER_ID))
+async def manual_trigger(client: Client, message: Message):
+    """只要你傳「update」就立刻執行一次 daily_job"""
+    if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
+        await message.reply("收到指令，正在執行每日通知...")
+        await daily_job(is_previous_day=False, triggered_by_user=True, chat_id=message.chat.id)
+        # 如果你有「前一天」版本，也可以加另一個指令
+        # elif message.text.strip().lower() == "prev":
+        #     await daily_job(is_previous_day=True, triggered_by_user=True, chat_id=message.chat.id)
 # ================== 收到 Excel 時自動更新 ==================
 @app.on_message(filters.private & filters.document)
 async def receive_excel(client: Client, message: Message):
