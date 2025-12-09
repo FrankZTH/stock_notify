@@ -52,11 +52,14 @@ async def receive_excel(client: Client, message: Message):
             logging.error(f"讀 Excel 失敗: {e}")
 
 # ================== 每日定時發送通知 ==================
-async def daily_job():
+async def daily_job(is_previous_day=False, triggered_by_user=False, chat_id=None):
     global latest_df
-    if latest_df is None or latest_df.empty:
-        text = "今日通知\n目前還沒有收到 Excel 檔案，請傳給我～"
-        await app.send_message(MY_CHAT_ID, text)
+    if latest_df is None:
+        text = "找不到最新的 Excel 檔案，請先傳給我！"
+        if triggered_by_user and chat_id:
+            await app.send_message(chat_id, text)
+        else:
+            await app.send_message(YOUR_USER_ID, text)
         return
 
     results = []
