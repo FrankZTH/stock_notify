@@ -25,7 +25,7 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 # ==================== 加上這段：文字指令觸發更新 ====================
-@app.on_message(filters.private & filters.text & filters.user(YOUR_USER_ID))
+@app.on_message(filters.private & filters.text & filters.user(MY_CHAT_ID))
 async def manual_trigger(client: Client, message: Message):
     """只要你傳「update」就立刻執行一次 daily_job"""
     if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
