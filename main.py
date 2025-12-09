@@ -69,11 +69,11 @@ async def daily_job():
     if '股票代號' not in latest_df.columns or '股票名稱' not in latest_df.columns:
         await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「股票名稱」欄位")
         return
-
+    
     for idx, row in latest_df.iterrows():
         ticker = str(row['股票代號']).strip()
         name   = str(row['股票名稱']).strip()
-
+        await app.send_message(MY_CHAT_ID, ticker)
         # === 條件 1：26成長率 > 15% ===
         try:
             growth_26 = float(row['26成長率'])
