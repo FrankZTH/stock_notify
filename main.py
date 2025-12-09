@@ -81,27 +81,27 @@ async def daily_job():
                 continue
         except:
             continue  # 轉換失敗就跳過
+        print(ticker)
+        # # === 條件 2：EPS25成長率(%)、EPS26成長率(%)、EPS27成長率(%) 都 > 0 ===
+        # growth_cols = ['EPS25成長率(%)', 'EPS26成長率(%)', 'EPS27成長率(%)']
+        # growth_values = []
+        # valid_count = 0
 
-        # === 條件 2：EPS25成長率(%)、EPS26成長率(%)、EPS27成長率(%) 都 > 0 ===
-        growth_cols = ['EPS25成長率(%)', 'EPS26成長率(%)', 'EPS27成長率(%)']
-        growth_values = []
-        valid_count = 0
+        # for col in growth_cols:
+        #     if col not in row or pd.isna(row[col]) or row[col] == '':
+        #         continue  # 空值直接跳過，不中斷
+        #     try:
+        #         val = float(row[col])
+        #         if val > 0:
+        #             valid_count += 1
+        #         growth_values.append(val)
+        #     except:
+        #         continue
 
-        for col in growth_cols:
-            if col not in row or pd.isna(row[col]) or row[col] == '':
-                continue  # 空值直接跳過，不中斷
-            try:
-                val = float(row[col])
-                if val > 0:
-                    valid_count += 1
-                growth_values.append(val)
-            except:
-                continue
-
-        # 至少要有 1 個 >0 才算（你說「都>0」，但若有缺值只看有資料的）
-        # 如果你嚴格要求「有填的欄位全部必須 >0」，改成下面這行：
-        if valid_count == 0 or valid_count < len([v for v in growth_values if not pd.isna(v)]):
-            continue
+        # # 至少要有 1 個 >0 才算（你說「都>0」，但若有缺值只看有資料的）
+        # # 如果你嚴格要求「有填的欄位全部必須 >0」，改成下面這行：
+        # if valid_count == 0 or valid_count < len([v for v in growth_values if not pd.isna(v)]):
+        #     continue
 
         # === 兩條件都通過，開始計算 MA 位置 ===
         try:
