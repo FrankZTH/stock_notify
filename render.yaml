@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: my-stock-bot
+    env: python
+    plan: free
+    startCommand: python main.py
+    envVars:
+      API_ID:
+      API_HASH:
+      BOT_TOKEN:
+      MY_CHAT_ID:

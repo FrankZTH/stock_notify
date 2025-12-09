@@ -122,10 +122,10 @@ def get_ma_alignment_from_data(ma_data: Dict, consolidation_threshold: float = 0
     return "趨勢不明顯"
 
 # 範例使用
-if __name__ == "__main__":
-    data_2330 = get_ma_position_data("2330", period="30y")
+# if __name__ == "__main__":
+#     data_2330 = get_ma_position_data("2330", period="30y")
 
-    status_bullish = get_ma_alignment_from_data(data_2330, consolidation_threshold=0.02)
-    print(status_bullish)
-    print("\n--- 台積電 (2330) 均線數據 (最終穩定版本 - 使用 .item()) ---")
-    print(data_2330)
+#     status_bullish = get_ma_alignment_from_data(data_2330, consolidation_threshold=0.02)
+#     print(status_bullish)
+#     print("\n--- 台積電 (2330) 均線數據 (最終穩定版本 - 使用 .item()) ---")
+#     print(data_2330)
