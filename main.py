@@ -187,6 +187,6 @@ async def main():
     # 保持運行
     await asyncio.Event().wait()
 
-if __name__ == "__main__":
-    # Render 會自動執行這個
-    app.run(main())
+# if __name__ == "__main__":
+#     # Render 會自動執行這個
+#     app.run(main())
