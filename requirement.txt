@@ -5,3 +5,4 @@ openpyxl
 apscheduler
 yfinance
 numpy
+dotenv
