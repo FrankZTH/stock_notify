@@ -6,7 +6,12 @@ from pyrogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
 import logging
-from get_stock_position import get_ma_position_data, get_ma_alignment_from_data
+from get_stock_position import get_ma_position_data, get_ma_alignment_from_data, calculate_ma_scores
+from dotenv import load_dotenv
+import os
+import time
+
+load_dotenv()
 
 # ================== 設定區（全部用環境變數，Render 上超安全）==================
 API_ID = int(os.getenv("API_ID"))           # Render 後台填
@@ -63,58 +68,69 @@ async def daily_job():
 
     # 取得 Excel 全部欄位名稱（保留給你後面用）
     all_columns = latest_df.columns.tolist()
+    tt = f"Excel 欄位總共 {len(all_columns)} 個：{all_columns}"
+    # await app.send_message(MY_CHAT_ID, tt)
     print(f"Excel 欄位總共 {len(all_columns)} 個：{all_columns}")
 
     # 必要欄位檢查（只檢查最核心的，其他有缺就跳過那檔）
-    if '股票代號' not in latest_df.columns or '股票名稱' not in latest_df.columns:
-        await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「股票名稱」欄位")
+    if '股票代號' not in latest_df.columns or '公司名稱' not in latest_df.columns:
+        await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
         return
     
     for idx, row in latest_df.iterrows():
         ticker = str(row['股票代號']).strip()
-        name   = str(row['股票名稱']).strip()
-        await app.send_message(MY_CHAT_ID, ticker)
+        name   = str(row['公司名稱']).strip()
+        broker   = str(row['券商']).strip()
+        # await app.send_message(MY_CHAT_ID, ticker)
         # === 條件 1：26成長率 > 15% ===
         try:
-            growth_26 = float(row['26成長率'])
+            growth_26 = float(row['EPS26成長率(%)'])
             if growth_26 <= 15:
                 continue
         except:
             continue  # 轉換失敗就跳過
         print(ticker)
         # # === 條件 2：EPS25成長率(%)、EPS26成長率(%)、EPS27成長率(%) 都 > 0 ===
-        # growth_cols = ['EPS25成長率(%)', 'EPS26成長率(%)', 'EPS27成長率(%)']
-        # growth_values = []
-        # valid_count = 0
+        growth_cols = ['EPS25成長率(%)', 'EPS26成長率(%)', 'EPS27成長率(%)']
+        growth_values = []
+        valid_count = 0
 
-        # for col in growth_cols:
-        #     if col not in row or pd.isna(row[col]) or row[col] == '':
-        #         continue  # 空值直接跳過，不中斷
-        #     try:
-        #         val = float(row[col])
-        #         if val > 0:
-        #             valid_count += 1
-        #         growth_values.append(val)
-        #     except:
-        #         continue
+        if idx % 5 == 0 and idx != 0: # 例如：每處理 10 檔股票，暫停 2 秒
+             print("--- 暫停 3 秒，避免頻繁查價被鎖定 ---")
+             time.sleep(3)
 
-        # # 至少要有 1 個 >0 才算（你說「都>0」，但若有缺值只看有資料的）
-        # # 如果你嚴格要求「有填的欄位全部必須 >0」，改成下面這行：
-        # if valid_count == 0 or valid_count < len([v for v in growth_values if not pd.isna(v)]):
-        #     continue
+        for col in growth_cols:
+            if col not in row or pd.isna(row[col]) or row[col] == '':
+                continue  # 空值直接跳過，不中斷
+            try:
+                val = float(row[col])
+                if val > 0:
+                    valid_count += 1
+                growth_values.append(val)
+            except:
+                continue
+
+        # 至少要有 1 個 >0 才算（你說「都>0」，但若有缺值只看有資料的）
+        # 如果你嚴格要求「有填的欄位全部必須 >0」，改成下面這行：
+        if valid_count == 0 or valid_count < len([v for v in growth_values if not pd.isna(v)]):
+            continue
 
         # === 兩條件都通過，開始計算 MA 位置 ===
         try:
             print(f"正在分析 {ticker} {name}...")
-            ma_data = get_ma_position_data(ticker, period="30y")
+            ma_data = get_ma_position_data(ticker, period="max")
             stock_status = get_ma_alignment_from_data(ma_data, consolidation_threshold=0.02)
+            ma_scores = calculate_ma_scores(ma_data)
             result = {
                 "代號": ticker,
                 "名稱": name,
                 "26成長率": growth_26,
                 "EPS成長率正向數": valid_count,
                 "成長率明細": growth_values,
-                "完整MA資料": ma_data,
+                "趨勢":stock_status,
+                **ma_scores,  # 展開分數與偏離度資料
+                # "完整MA資料": ma_data,
+                "券商":broker,
             }
             results.append(result)
             print(f"加入清單：{ticker} {name}")
@@ -122,6 +138,9 @@ async def daily_job():
         except Exception as e:
             print(f"{ticker} 計算失敗: {e}")
 
+    results.sort(key=lambda x: x.get('MA買點分數', 0), reverse=True)
+    filtered_results = [r for r in results if r.get('MA買點分數', 0) > 5]
+    
     # === 產生最終通知 ===
     if not results:
         text = ("今日掃描完成\n"
@@ -129,12 +148,18 @@ async def daily_job():
                 "• 26成長率 > 15%\n"
                 "• EPS近三年成長率(%) 有填的欄位皆 > 0%")
     else:
-        text = f"找到 {len(results)} 檔潛力股！\n\n"
-        for r in results:
+        text = f"找到 {len(filtered_results)} 位置不錯的股票！\n\n"
+        for r in filtered_results:
+            stock_code = r['代號']
+            stock_link = f"https://tw.stock.yahoo.com/quote/{stock_code}.TW/technical-analysis"
             text += (f"• <code>{r['代號']}</code> {r['名稱']}\n"
                      f"  ├ 26成長率：{r['26成長率']:.1f}%\n"
-                     f"  ├ EPS正成長：{r['EPS成長率正向數']}/3 年\n"
-                     f"  └ 目前位置：{r['均線位置']}\n\n")
+                     f"  ├ 連續3 年EPS正成長：{r['EPS成長率正向數']}\n"
+                     f"  ├ k線趨勢：{r['趨勢']}\n"
+                     f"  ├ D240/D60/D20 偏離度：{r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n\n"
+                     f"  ├ K線：**<a href='{stock_link}'><code>{stock_code}</code> {r['名稱']}</a>**\n"                     
+                     f"  └ 券商：{r['券商']}\n"
+                    )
 
         text += f"更新時間：{pd.Timestamp('now').tz_localize('Asia/Taipei').strftime('%Y-%m-%d %H:%M')}"
 

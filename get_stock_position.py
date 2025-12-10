@@ -1,7 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from typing import Dict, Union, Tuple
+from typing import Dict, Union, Tuple, Any
  
 def get_ma_position_data(stock: Union[str, int], period: str = "30y") -> Dict[str, Union[str, float]]:
     """
@@ -9,13 +9,28 @@ def get_ma_position_data(stock: Union[str, int], period: str = "30y") -> Dict[st
     使用 .tail(1).item() 獲取最新數值，提高程式碼穩定性。
     """
     stock_code = str(stock)
-    ticker = stock_code if stock_code.endswith(".TW") else stock_code + ".TW"
+    # 這裡我們不再只補齊 .TW，而是準備兩個嘗試的 ticker
+    ticker_tw = stock_code + ".TW"
+    ticker_two = stock_code + ".TWO"
+    ticker_list = [ticker_tw, ticker_two]
     
     ma_periods = [5, 10, 20, 60, 120, 240]
     default_nan_result = {"股票代號": stock_code, "現價": np.nan, **{f"MA{n}": np.nan for n in ma_periods}}
-
+    df = pd.DataFrame()
+    final_ticker = ""
     try:
-        df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+        for ticker in ticker_list:
+            try:
+                # 嘗試下載
+                df = yf.download(ticker, period=period, auto_adjust=True, progress=False, timeout=10)
+                
+                if not df.empty:
+                    final_ticker = ticker
+                    break # 成功下載後跳出迴圈
+                
+            except Exception as e:
+                # 忽略下載失敗的錯誤，繼續嘗試下一個 ticker
+                pass
 
         if df.empty:
             print(f"⚠️ 股票 {stock_code} ({ticker}) 數據下載失敗或為空。")
@@ -121,6 +136,79 @@ def get_ma_alignment_from_data(ma_data: Dict, consolidation_threshold: float = 0
     # --- 4. 趨勢不明顯 (Uncertain) ---
     return "趨勢不明顯"
 
+
+
+def calculate_ma_scores(ma_data: Dict[str, Union[str, float]]) -> Dict[str, Any]:
+    """
+    根據股價與 MA240, MA60, MA20 的相對位置，計算買點分數和偏離度。
+    
+    Args:
+        ma_data: 由 get_ma_position_data 產生的字典。
+        
+    Returns:
+        包含分數、各均線偏離度及買點判斷的字典。
+    """
+    current_price = ma_data.get("現價")
+    ma240 = ma_data.get("MA240")
+    ma60 = ma_data.get("MA60")
+    ma20 = ma_data.get("MA20")
+    
+    # 檢查核心數據是否完整
+    if any(pd.isna(v) or v is None for v in [current_price, ma240, ma60, ma20]):
+        return {"MA買點分數": 0, "D240": np.nan, "D60": np.nan, "D20": np.nan, "買點判斷": "數據缺失"}
+    
+    buy_score = 0
+    ma_devs = {} # 儲存偏離度
+    
+    # 計算各均線偏離度 (D_n)，並轉為百分比
+    # 必須確保分母不為零，雖然在股價數據中幾乎不可能，但量化程式碼應保持嚴謹。
+    
+    ma_periods = [240, 60, 20]
+    for n in ma_periods:
+        ma_key = f"MA{n}"
+        ma_value = ma_data.get(ma_key)
+        
+        # 使用 0.0001 避免除以零
+        Dn = ((current_price - ma_value) / (ma_value + 0.0001)) * 100
+        ma_devs[f"D{n}"] = round(Dn, 2)
+        
+        # --- 依據 MA240, MA60, MA20 進行計分 ---
+        if n == 240:
+            if -5 <= Dn <= 0:  # 貼近年線或略低 (最佳逆向買點)
+                buy_score += 5
+            elif 0 < Dn <= 5: # 剛突破年線
+                buy_score += 3
+        
+        elif n == 60:
+            if -3 <= Dn <= 0:  # 貼近季線
+                buy_score += 3
+            elif 0 < Dn <= 3:  # 剛突破季線
+                buy_score += 1
+                
+        elif n == 20:
+            if -1 <= Dn <= 1:  # 緊貼月線
+                buy_score += 1
+# --- 額外獎勵分數 ---
+    D240 = ma_devs['D240']
+    D60 = ma_devs['D60']
+    print(buy_score)
+    if D240 < 0 and D60 > 0:
+        buy_score += 2 # 底部反彈 (長線低於，中線高於)
+        status = "長線支撐/中期反彈"
+    elif buy_score >= 8:
+        status = "強勁買點"
+    elif buy_score >= 5:
+        status = "潛力觀察"
+    else:
+        status = "位置偏高/趨勢不明"
+        
+    return {
+        "MA買點分數": buy_score, 
+        "D240": ma_devs['D240'], 
+        "D60": ma_devs['D60'], 
+        "D20": ma_devs['D20'],
+        "買點判斷": status,
+    }
 # 範例使用
 # if __name__ == "__main__":
 #     data_2330 = get_ma_position_data("2330", period="30y")
