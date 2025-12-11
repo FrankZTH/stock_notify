@@ -24,7 +24,7 @@ def run_web():
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app_fastapi, host="0.0.0.0", port=port, log_level="error")
 
-Thread(target=run_web, daemon=True).start()
+
 load_dotenv()
 
 # ================== 設定區（全部用環境變數，Render 上超安全）==================
@@ -204,4 +204,9 @@ async def main():
 # if __name__ == "__main__":
     # Render 會自動執行這個
     # app.run(main())
-    Thread(target=run_web, daemon=True).start()
+    # Thread(target=run_web, daemon=True).start()
+
+if __name__ == "__main__":
+    # 【使用 Pyrogram 的 app.run() 來運行主程序】
+    # 這是 Pyrogram Bot 的標準啟動方式
+    app.run(main()) # 這行確保 main() 函數被正確執行並阻塞
