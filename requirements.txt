@@ -6,3 +6,5 @@ apscheduler
 yfinance
 numpy
 dotenv
+fastapi
+uvicorn[standard]

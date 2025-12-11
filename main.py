@@ -10,6 +10,18 @@ from get_stock_position import get_ma_position_data, get_ma_alignment_from_data,
 from dotenv import load_dotenv
 import os
 import time
+from fastapi import FastAPI
+import uvicorn
+import os
+from threading import Thread
+app_fastapi = FastAPI()
+
+async def root():
+    return {"message": "股票機器人活著喔！", "status": "running"}
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app_fastapi, host="0.0.0.0", port=port, log_level="error")
 
 load_dotenv()
 
@@ -187,6 +199,6 @@ async def main():
     # 保持運行
     await asyncio.Event().wait()
 
-# if __name__ == "__main__":
-#     # Render 會自動執行這個
-#     app.run(main())
+if __name__ == "__main__":
+    # Render 會自動執行這個
+    app.run(main())
