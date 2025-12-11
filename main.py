@@ -16,6 +16,7 @@ import os
 from threading import Thread
 app_fastapi = FastAPI()
 
+@app_fastapi.get("/")
 async def root():
     return {"message": "股票機器人活著喔！", "status": "running"}
 
@@ -23,6 +24,7 @@ def run_web():
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app_fastapi, host="0.0.0.0", port=port, log_level="error")
 
+Thread(target=run_web, daemon=True).start()
 load_dotenv()
 
 # ================== 設定區（全部用環境變數，Render 上超安全）==================
@@ -199,7 +201,7 @@ async def main():
     # 保持運行
     await asyncio.Event().wait()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # Render 會自動執行這個
     # app.run(main())
     Thread(target=run_web, daemon=True).start()
