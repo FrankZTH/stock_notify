@@ -201,4 +201,5 @@ async def main():
 
 if __name__ == "__main__":
     # Render 會自動執行這個
-    app.run(main())
+    # app.run(main())
+    Thread(target=run_web, daemon=True).start()
