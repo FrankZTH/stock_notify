@@ -20,9 +20,15 @@ app_fastapi = FastAPI()
 async def root():
     return {"message": "股票機器人活著喔！", "status": "running"}
 
-def run_web():
+async def run_web():
+    """啟動 Uvicorn 伺服器，並使用 Server 類而非 run 函式以避免阻塞"""
     port = int(os.environ.get("PORT", 10000))
-    uvicorn.run(app_fastapi, host="0.0.0.0", port=port, log_level="error")
+    config = uvicorn.Config(app_fastapi, host="0.0.0.0", port=port, log_level="error")
+    server = uvicorn.Server(config)
+    
+    # 使用 await 運行伺服器，它會持續運行並監聽 Port
+    print(f"FastAPI Web Service 正在監聽 Port: {port}")
+    await server.serve()
 
 
 load_dotenv()
@@ -199,7 +205,10 @@ async def main():
 
     print("排程已啟動：每天 12:00 和 22:00 發送通知")
     # 保持運行
-    await asyncio.Event().wait()
+    await asyncio.gather(
+        run_web(),       # 啟動 Web 服務並監聽 Port
+        asyncio.Event().wait() # 讓主程序等待，保持 Pyrogram Bot 運行
+    )
 
 # if __name__ == "__main__":
     # Render 會自動執行這個
