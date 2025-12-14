@@ -174,10 +174,10 @@ def calculate_ma_scores(ma_data: Dict[str, Union[str, float]]) -> Dict[str, Any]
         
         # --- 依據 MA240, MA60, MA20 進行計分 ---
         if n == 240:
-            if -5 <= Dn <= 0:  # 貼近年線或略低 (最佳逆向買點)
-                buy_score += 5
+            if Dn <= 0:  # 貼近年線或略低 (最佳逆向買點)
+                buy_score += 6
             elif 0 < Dn <= 5: # 剛突破年線
-                buy_score += 3
+                buy_score += 4
         
         elif n == 60:
             if -3 <= Dn <= 0:  # 貼近季線
