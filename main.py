@@ -62,6 +62,9 @@ async def manual_trigger(client: Client, message: Message):
     if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
         await message.reply("收到指令，正在執行每日通知...")
         await daily_job()
+    else :
+        await handle_stock_query(client, message)
+    return
         # 如果你有「前一天」版本，也可以加另一個指令
         # elif message.text.strip().lower() == "prev":
         #     await daily_job(is_previous_day=True, triggered_by_user=True, chat_id=message.chat.id)
@@ -81,19 +84,21 @@ async def receive_excel(client: Client, message: Message):
         except Exception as e:
             await message.reply(f"讀取失敗：{str(e)}")
             logging.error(f"讀 Excel 失敗: {e}")
+    return
 
 # ----------------------------------------------------
 # 2. 新增訊息處理函式：處理用戶輸入的股票代號/名稱
 # ----------------------------------------------------
-@app.on_message(filters.private & filters.text & ~filters.command) # 接收私聊中的文字訊息，排除指令
 async def handle_stock_query(client: Client, message: Message):
+    if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
+        return # 確保不處理 manual_trigger 應該處理的關鍵字
     global latest_df
     query = message.text.strip().upper() # 轉換成大寫方便比對
 
     if latest_df is None or latest_df.empty:
         await message.reply("目前 Excel 資料為空，請先上傳檔案。")
         return
-
+    await message.reply("搜尋中，請稍後。")
     # 判斷輸入是否為純數字的股票代號（例如：2330, 2454）
     is_ticker_query = query.isdigit()
     
@@ -106,10 +111,10 @@ async def handle_stock_query(client: Client, message: Message):
         matched_rows = latest_df[latest_df['公司名稱'].astype(str).str.contains(query, case=False, na=False)]
 
     if matched_rows.empty:
-        await message.reply(f"找不到關於「**{query}**」的資料。")
+        await message.reply(f"找不到關於「{query}」的資料。")
         return
 
-    await message.reply(f"找到 {len(matched_rows)} 筆關於「**{query}**」的報告，正在整理...")
+    await message.reply(f"找到 {len(matched_rows)} 筆關於「{query}」的報告，正在整理...")
 
     # 將匹配到的 DataFrame 轉換成類似 daily_job 中 results 的格式
     # 由於這裡只做搜尋，我們先假設用戶輸入的股票已滿足成長率條件，
@@ -176,7 +181,7 @@ async def handle_stock_query(client: Client, message: Message):
         await message.reply(f"找到關於「**{query}**」的報告，但處理後沒有有效的最新資料可顯示。")
         return
         
-    response_text = f"**🔍 找到關於「{query}」的最新報告：**\n\n"
+    response_text = f"🔍 找到關於「{query}」的最新報告：\n\n"
     
     # 根據 MA 買點分數降序排序，分數高的先顯示
     # final_results.sort(key=lambda x: x.get('MA買點分數', 0), reverse=True)
@@ -187,14 +192,13 @@ async def handle_stock_query(client: Client, message: Message):
         stock_link = f"https://tw.stock.yahoo.com/quote/{stock_code}.TW/technical-analysis"
         
 
-        response_text += (f"**<code>{stock_code}</code> {stock_name}**\n"
-                          f"  ├ **目標價：** {r['目標價']}\n"
-                          f"  ├ **券商：** {r['券商']} (報告日期: {r['日期']})\n"
-                          f"  ├ **MA 買點分數：** `{r.get('MA買點分數', 0):.0f}` (須 > 5)\n"
-                          f"  ├ **K線趨勢：** {r['趨勢']}\n"
-                          f"  ├ **偏離度(240/60/20)：** {r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n"
-                          f"  ├ **報告摘要：** `{r['報告摘要']}`\n"
-                          f"  └ **技術分析：** <a href='{stock_link}'>點此查看 K 線</a>\n\n"
+        response_text += (f"<code>{stock_code}</code> {stock_name}\n"
+                          f"  ├ 目標價： {r['目標價']}\n"
+                          f"  ├ 券商： {r['券商']} (報告日期: {r['日期']})\n"
+                          f"  ├ MA 買點分數： `{r.get('MA買點分數', 0):.0f}` (須 > 5)\n"
+                          f"  ├ K線趨勢： {r['趨勢']}\n"
+                          f"  ├ 偏離度(240/60/20)： {r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n"
+                          f"  └ 技術分析： <a href='{stock_link}'>點此查看 K 線</a>\n\n"
                           )
 
     await message.reply(
@@ -224,9 +228,9 @@ def filter_and_deduplicate_results(results_list: list) -> list:
         try:
             # 根據您的範例日期格式 '2025/11/12 12:00:00 AM'
             # 這裡假設 r['日期'] 已經包含了正確的日期字串
-            current_date = datetime.strptime(current_date_str, '%Y/%m/%d %I:%M:%S %p')
+            current_date = datetime.datetime.strptime(current_date_str, '%Y/%m/%d %I:%M:%S %p')
         except ValueError:
-            current_date = datetime.min
+            current_date = datetime.datetime.min
             
         # 檢查這個組合是否已存在，或當前的日期是否更新
         if key not in unique_results or current_date > unique_results[key]['date_obj']:
@@ -346,10 +350,9 @@ async def daily_job():
             text += (f"• <code>{r['代號']}</code> {r['名稱']}\n"
                      f"  ├ 目標價：{r['目標價']}\n"
                      f"  ├ 26成長率：{r['26成長率']:.1f}%\n"
-                    #  f"  ├ 連續3 年EPS正成長：{r['EPS成長率正向數']}\n"
                      f"  ├ k線趨勢：{r['趨勢']}\n"
                      f"  ├ D240/D60/D20 偏離度：{r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n\n"
-                     f"  ├ K線：**<a href='{stock_link}'><code>{stock_code}</code> {r['名稱']}</a>**\n"                     
+                     f"  ├ K線：<a href='{stock_link}'><code>{stock_code}</code> {r['名稱']}</a>\n"                     
                      f"  └ 券商：{r['券商']}\n"
                     )
 
@@ -395,7 +398,7 @@ async def main():
     # app.run(main())
     # Thread(target=run_web, daemon=True).start()
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     # 【使用 Pyrogram 的 app.run() 來運行主程序】
     # 這是 Pyrogram Bot 的標準啟動方式
-    app.run(main()) # 這行確保 main() 函數被正確執行並阻塞
+    # app.run(main()) # 這行確保 main() 函數被正確執行並阻塞
