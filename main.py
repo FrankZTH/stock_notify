@@ -63,7 +63,32 @@ async def manual_trigger(client: Client, message: Message):
         await message.reply("收到指令，正在執行每日通知...")
         await daily_job()
     else :
-        await handle_stock_query(client, message)
+        if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
+            return # 確保不處理 manual_trigger 應該處理的關鍵字
+        global latest_df
+        query = message.text.strip().upper() # 轉換成大寫方便比對
+
+        if latest_df is None or latest_df.empty:
+            await message.reply("目前 Excel 資料為空，請先上傳檔案。")
+            return
+        await message.reply("搜尋中，請稍後。")
+        # 判斷輸入是否為純數字的股票代號（例如：2330, 2454）
+        is_ticker_query = query.isdigit()
+        
+        # 根據股票代號或公司名稱來過濾資料
+        if is_ticker_query:
+            # 股票代號比對
+            matched_rows = latest_df[latest_df['股票代號'].astype(str).str.strip() == query]
+        else:
+            # 公司名稱包含比對
+            matched_rows = latest_df[latest_df['公司名稱'].astype(str).str.contains(query, case=False, na=False)]
+
+        if matched_rows.empty:
+            await message.reply(f"找不到關於「{query}」的資料。")
+            return
+
+        await message.reply(f"找到 {len(matched_rows)} 筆關於「{query}」的報告，正在整理...")
+        await handle_stock_query(client, message, query,matched_rows)
     return
         # 如果你有「前一天」版本，也可以加另一個指令
         # elif message.text.strip().lower() == "prev":
@@ -89,32 +114,8 @@ async def receive_excel(client: Client, message: Message):
 # ----------------------------------------------------
 # 2. 新增訊息處理函式：處理用戶輸入的股票代號/名稱
 # ----------------------------------------------------
-async def handle_stock_query(client: Client, message: Message):
-    if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
-        return # 確保不處理 manual_trigger 應該處理的關鍵字
-    global latest_df
-    query = message.text.strip().upper() # 轉換成大寫方便比對
-
-    if latest_df is None or latest_df.empty:
-        await message.reply("目前 Excel 資料為空，請先上傳檔案。")
-        return
-    await message.reply("搜尋中，請稍後。")
-    # 判斷輸入是否為純數字的股票代號（例如：2330, 2454）
-    is_ticker_query = query.isdigit()
+async def handle_stock_query(client: Client, message: Message, query, matched_rows):
     
-    # 根據股票代號或公司名稱來過濾資料
-    if is_ticker_query:
-        # 股票代號比對
-        matched_rows = latest_df[latest_df['股票代號'].astype(str).str.strip() == query]
-    else:
-        # 公司名稱包含比對
-        matched_rows = latest_df[latest_df['公司名稱'].astype(str).str.contains(query, case=False, na=False)]
-
-    if matched_rows.empty:
-        await message.reply(f"找不到關於「{query}」的資料。")
-        return
-
-    await message.reply(f"找到 {len(matched_rows)} 筆關於「{query}」的報告，正在整理...")
 
     # 將匹配到的 DataFrame 轉換成類似 daily_job 中 results 的格式
     # 由於這裡只做搜尋，我們先假設用戶輸入的股票已滿足成長率條件，
