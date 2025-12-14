@@ -345,7 +345,7 @@ async def daily_job():
                 "• EPS近三年成長率(%) 有填的欄位皆 > 0%")
     else:
         text = f"找到 {len(final_results)} 位置不錯的股票！\n\n"
-        for r in final_results:
+        for i, r in enumerate(final_results):
             stock_code = r['代號']
             stock_link = f"https://tw.stock.yahoo.com/quote/{stock_code}.TW/technical-analysis"
             text += (f"• <code>{r['代號']}</code> {r['名稱']}\n"
@@ -356,6 +356,22 @@ async def daily_job():
                      f"  ├ K線：<a href='{stock_link}'><code>{stock_code}</code> {r['名稱']}</a>\n"                     
                      f"  └ 券商：{r['券商']}\n"
                     )
+            
+            if i / 5 ==1: 
+                await app.send_message(
+                MY_CHAT_ID, 
+                text, 
+                parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
+                disable_web_page_preview=True
+                )
+                await app.send_message(
+                    PETER_CHAT_ID, 
+                    text, 
+                    parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
+                    disable_web_page_preview=True
+                )
+                text = ""
+                    
 
         text += f"更新時間：{pd.Timestamp('now').tz_localize('Asia/Taipei').strftime('%Y-%m-%d %H:%M')}"
 
