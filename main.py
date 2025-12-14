@@ -56,7 +56,7 @@ app = Client(
 
 
 # ==================== 加上這段：文字指令觸發更新 ====================
-@app.on_message(filters.private & filters.text)
+@app.on_message(filters.private & filters.text& ~filters.me)
 async def manual_trigger(client: Client, message: Message):
     """只要你傳「update」就立刻執行一次 daily_job"""
     if message.text.strip().lower() in ["update", "更新", "跑一次", "執行"]:
@@ -215,7 +215,7 @@ def filter_and_deduplicate_results(results_list: list) -> list:
     並篩選出 MA買點分數 > 5 的結果。
     """
     # 步驟 1：篩選 MA 買點分數 > 5
-    filtered_results = [r for r in results_list if r.get('MA買點分數', 0) > 5]
+    filtered_results = [r for r in results_list if r.get('MA買點分數', 0) > 7]
     
     unique_results = {}
     for r in filtered_results:
