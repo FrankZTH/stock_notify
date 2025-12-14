@@ -398,7 +398,7 @@ async def main():
     # app.run(main())
     # Thread(target=run_web, daemon=True).start()
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
     # 【使用 Pyrogram 的 app.run() 來運行主程序】
     # 這是 Pyrogram Bot 的標準啟動方式
-    # app.run(main()) # 這行確保 main() 函數被正確執行並阻塞
+    app.run(main()) # 這行確保 main() 函數被正確執行並阻塞
