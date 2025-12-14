@@ -39,6 +39,7 @@ API_ID = int(os.getenv("API_ID"))           # Render 後台填
 API_HASH = os.getenv("API_HASH")            # Render 後台填
 BOT_TOKEN = os.getenv("BOT_TOKEN")          # Render 後台填
 MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
+PETER_CHAT_ID = int(os.getenv("PETER_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
 PORT = int(os.getenv("PORT")) 
 
 # 全域儲存最新的 DataFrame
@@ -244,6 +245,7 @@ async def daily_job():
     if latest_df is None or latest_df.empty:
         text = "今日通知\n目前還沒有收到 Excel 檔案，請傳給我～"
         await app.send_message(MY_CHAT_ID, text)
+        await app.send_message(PETER_CHAT_ID, text)
         return
 
     results = []
@@ -257,6 +259,7 @@ async def daily_job():
     # 必要欄位檢查（只檢查最核心的，其他有缺就跳過那檔）
     if '股票代號' not in latest_df.columns or '公司名稱' not in latest_df.columns:
         await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
+        await app.send_message(PETER_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
         return
     
     for idx, row in latest_df.iterrows():
@@ -354,6 +357,12 @@ async def daily_job():
 
     await app.send_message(
         MY_CHAT_ID, 
+        text, 
+        parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
+        disable_web_page_preview=True
+    )
+    await app.send_message(
+        PETER_CHAT_ID, 
         text, 
         parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
         disable_web_page_preview=True
