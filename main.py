@@ -138,6 +138,10 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
             name = str(row['公司名稱']).strip()
             broker = str(row['券商']).strip()
             date = str(row['日期']).strip()
+            eps_24 = float(row['EPS24'])
+            eps_25 = float(row['EPS25'])
+            eps_26 = float(row['EPS26'])
+            eps_27 = float(row['EPS27'])
             growth_25 = float(row['EPS25成長率(%)'])
             growth_26 = float(row['EPS26成長率(%)'])
             growth_27 = float(row['EPS27成長率(%)'])
@@ -154,7 +158,8 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
                 "代號": ticker,
                 "名稱": name,
                 "目標價": target,
-                "26成長率": growth_26,
+                "EPS": [eps_24, eps_25, eps_26, eps_27],
+                "成長率": [growth_25, growth_26, growth_27],
                 "趨勢":stock_status,
                 **ma_scores,
                 "報告摘要":abstract,
@@ -171,7 +176,7 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
     # 否則，如果用戶單獨查詢，但分數不夠，他會得不到任何資訊。
     # 如果您堅持單獨查詢也必須 MA買點分數 > 5，請改用 filter_and_deduplicate_results
 
-    final_results = filter_and_deduplicate_results(temp_results)
+    final_results = filter_and_deduplicate_results(temp_results, 0)
 
             
     # final_query_results = [item['data'] for item in unique_latest_results.values()]
@@ -196,9 +201,10 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
         response_text += (f"<code>{stock_code}</code> {stock_name}\n"
                           f"  ├ 目標價： {r['目標價']}\n"
                           f"  ├ 券商： {r['券商']} (報告日期: {r['日期']})\n"
-                          f"  ├ MA 買點分數： `{r.get('MA買點分數', 0):.0f}` (須 > 5)\n"
+                          f"  ├ 逐年EPS： `{r.get['EPS']}\n"
+                          f"  ├ EPS成長率： `{r.get['成長率']}\n"
                           f"  ├ K線趨勢： {r['趨勢']}\n"
-                          f"  ├ 偏離度(240/60/20)： {r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n"
+                          f"  ├ 偏離度(240/60/20)： \n{r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n"
                           f"  └ 技術分析： <a href='{stock_link}'>點此查看 K 線</a>\n\n"
                           )
 
@@ -209,16 +215,17 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
     )
     logging.info(f"已回覆用戶查詢: {query}")
 
-def filter_and_deduplicate_results(results_list: list) -> list:
+def filter_and_deduplicate_results(results_list, score):
     """
     對結果列表進行去重（同股票代號+同券商只保留日期最新的一筆）
     並篩選出 MA買點分數 > 5 的結果。
     """
     # 步驟 1：篩選 MA 買點分數 > 5
-    filtered_results = [r for r in results_list if r.get('MA買點分數', 0) > 7]
+    if score != 0:
+        results_list = [r for r in results_list if r.get('MA買點分數', 0) > 7]
     
     unique_results = {}
-    for r in filtered_results:
+    for r in results_list:
         # 使用 '代號' 和 '券商' 作為唯一的 Key
         key = (r.get('代號'), r.get('券商'))
         # 這裡需要從 Excel 讀取時，確保 '日期' 欄位有正確儲存
@@ -352,7 +359,7 @@ async def daily_job():
                      f"  ├ 目標價：{r['目標價']}\n"
                      f"  ├ 26成長率：{r['26成長率']:.1f}%\n"
                      f"  ├ k線趨勢：{r['趨勢']}\n"
-                     f"  ├ D240/D60/D20 偏離度：{r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n\n"
+                     f"  ├ D240/D60/D20 偏離度：\n{r['D240']:.2f}% / {r['D60']:.2f}% / {r['D20']:.2f}%\n\n"
                      f"  ├ K線：<a href='{stock_link}'><code>{stock_code}</code> {r['名稱']}</a>\n"                     
                      f"  └ 券商：{r['券商']}\n"
                     )
