@@ -38,10 +38,11 @@ load_dotenv()
 API_ID = int(os.getenv("API_ID"))           # Render 後台填
 API_HASH = os.getenv("API_HASH")            # Render 後台填
 BOT_TOKEN = os.getenv("BOT_TOKEN")          # Render 後台填
-MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
-PETER_CHAT_ID = int(os.getenv("PETER_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
+ALL_ID = list(map(int, os.getenv("ALL_ID").split(",")))   # 你的 Telegram ID，例如 1350443089
+# MY_CHAT_ID = int(os.getenv("MY_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
+# PETER_CHAT_ID = int(os.getenv("PETER_CHAT_ID"))    # 你的 Telegram ID，例如 1350443089
 PORT = int(os.getenv("PORT")) 
-
+print(ALL_ID)
 # 全域儲存最新的 DataFrame
 latest_df: pd.DataFrame | None = None
 
@@ -53,6 +54,21 @@ app = Client(
     bot_token=BOT_TOKEN,
     # port=PORT
 )
+
+
+
+async def board_cast(text, message_type = 0):
+    for i in ALL_ID:
+        if message_type == 0:
+            await app.send_message(i, text)
+        elif message_type ==1:
+            await app.send_message(
+                    i, 
+                    text, 
+                    parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
+                    disable_web_page_preview=True
+                )
+            
 
 
 # ==================== 加上這段：文字指令觸發更新 ====================
@@ -256,8 +272,8 @@ async def daily_job():
     global latest_df
     if latest_df is None or latest_df.empty:
         text = "今日通知\n目前還沒有收到 Excel 檔案，請傳給我～"
-        await app.send_message(MY_CHAT_ID, text)
-        await app.send_message(PETER_CHAT_ID, text)
+        await board_cast(text)
+        # await app.send_message(PETER_CHAT_ID, text)
         return
 
     results = []
@@ -270,8 +286,10 @@ async def daily_job():
 
     # 必要欄位檢查（只檢查最核心的，其他有缺就跳過那檔）
     if '股票代號' not in latest_df.columns or '公司名稱' not in latest_df.columns:
-        await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
-        await app.send_message(PETER_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
+        text = "Excel 缺少「股票代號」或「公司名稱」欄位"
+        await board_cast(text)
+        # await app.send_message(MY_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
+        # await app.send_message(PETER_CHAT_ID, "Excel 缺少「股票代號」或「公司名稱」欄位")
         return
     
     for idx, row in latest_df.iterrows():
@@ -365,35 +383,14 @@ async def daily_job():
                     )
             
             if i / 5 ==1: 
-                await app.send_message(
-                MY_CHAT_ID, 
-                text, 
-                parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
-                disable_web_page_preview=True
-                )
-                await app.send_message(
-                    PETER_CHAT_ID, 
-                    text, 
-                    parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
-                    disable_web_page_preview=True
-                )
+                await board_cast(text,1)
                 text = ""
                     
 
         text += f"更新時間：{pd.Timestamp('now').tz_localize('Asia/Taipei').strftime('%Y-%m-%d %H:%M')}"
 
-    await app.send_message(
-        MY_CHAT_ID, 
-        text, 
-        parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
-        disable_web_page_preview=True
-    )
-    await app.send_message(
-        PETER_CHAT_ID, 
-        text, 
-        parse_mode=enums.ParseMode.HTML, # <--- 將字串替換為 enums.ParseMode.HTML
-        disable_web_page_preview=True
-    )
+    await board_cast(text,1)
+
     print(f"通知已發送，共 {len(results)} 檔符合條件")
 
     
