@@ -169,6 +169,7 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
             ma_data = get_ma_position_data(ticker, period="max")
             stock_status = get_ma_alignment_from_data(ma_data, consolidation_threshold=0.02)
             ma_scores = calculate_ma_scores(ma_data)
+            # print(ma_data)
 
             result = {
                 "代號": ticker,
@@ -212,10 +213,13 @@ async def handle_stock_query(client: Client, message: Message, query, matched_ro
         stock_code = r['代號']
         stock_name = r['名稱']
         stock_link = f"https://tw.stock.yahoo.com/quote/{stock_code}.TW/technical-analysis"
-        
+        # print(r)
+        BIAS = (float(r['目標價'])-float(r['現價']))/(float(r['現價']))+0.01
 
         response_text += (f"<code>{stock_code}</code> {stock_name}\n"
+                          f"  ├ 現價： {r['現價']}\n"
                           f"  ├ 目標價： {r['目標價']}\n"
+                          f"  ├ 潛在漲幅： {BIAS}%\n"
                           f"  ├ 券商： {r['券商']} (報告日期: {r['日期']})\n"
                           f"  ├ 逐年EPS： `{r['EPS']}\n"
                           f"  ├ EPS成長率： `{r['成長率']}\n"
@@ -374,6 +378,7 @@ async def daily_job():
             stock_code = r['代號']
             stock_link = f"https://tw.stock.yahoo.com/quote/{stock_code}.TW/technical-analysis"
             text += (f"• <code>{r['代號']}</code> {r['名稱']}\n"
+                     f"  ├ 現價： {r['現價']}\n"
                      f"  ├ 目標價：{r['目標價']}\n"
                      f"  ├ 26成長率：{r['26成長率']:.1f}%\n"
                      f"  ├ k線趨勢：{r['趨勢']}\n"

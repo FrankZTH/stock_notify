@@ -154,7 +154,7 @@ def calculate_ma_scores(ma_data: Dict[str, Union[str, float]]) -> Dict[str, Any]
     ma20 = ma_data.get("MA20")
     
     # 檢查核心數據是否完整
-    if any(pd.isna(v) or v is None for v in [current_price, ma240, ma60, ma20]):
+    if any(pd.isna(v) or v is None for v in [current_price]):
         return {"MA買點分數": 0, "D240": np.nan, "D60": np.nan, "D20": np.nan, "買點判斷": "數據缺失"}
     
     buy_score = 0
@@ -201,13 +201,14 @@ def calculate_ma_scores(ma_data: Dict[str, Union[str, float]]) -> Dict[str, Any]
         status = "潛力觀察"
     else:
         status = "位置偏高/趨勢不明"
-        
+    print(current_price)
     return {
         "MA買點分數": buy_score, 
         "D240": ma_devs['D240'], 
         "D60": ma_devs['D60'], 
         "D20": ma_devs['D20'],
         "買點判斷": status,
+        "現價": current_price,
     }
 # 範例使用
 # if __name__ == "__main__":
