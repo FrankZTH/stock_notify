@@ -365,7 +365,7 @@ async def daily_job():
     filtered_results = [r for r in results if r.get('MA買點分數', 0) > 5]
 
     
-    final_results = filter_and_deduplicate_results(filtered_results)
+    final_results = filter_and_deduplicate_results(filtered_results,1)
     # === 產生最終通知 ===
     if not final_results:
         text = ("今日掃描完成\n"
