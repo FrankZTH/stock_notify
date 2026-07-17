@@ -1,0 +1,15 @@
+# Crawly － 半自動網頁爬蟲 Privacy Policy
+
+This extension does NOT collect, store, or transmit any data to the
+author or any third-party server.
+
+All chat content, files, avatars, nicknames and passwords entered by
+users are sent ONLY to the self-hosted LAN Chat server whose URL the
+user manually enters in the extension. The author of this extension
+has no access to that server or its data.
+
+Locally, the extension uses chrome.storage.local to remember the
+server URL and nickname for convenience. No analytics, tracking, or
+external data transmission is performed by the extension itself.
+
+Contact: <temp.dragon.23@gmail.com>
